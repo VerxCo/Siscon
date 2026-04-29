@@ -1,6 +1,7 @@
 import uuid
 
-from fastapi import Header, HTTPException, status
+from fastapi import Depends, HTTPException, Security, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.core.auth import (
     build_authenticated_user,
@@ -8,6 +9,8 @@ from app.core.auth import (
 )
 from app.core.security import InvalidCredentialsError, parse_token_payload
 from app.repositories.user_repository import get_app_profile_by_user_id
+
+bearer_scheme = HTTPBearer(auto_error=False)
 
 
 def _is_uuid(value: str) -> bool:
@@ -18,26 +21,25 @@ def _is_uuid(value: str) -> bool:
         return False
 
 
-def get_bearer_token(authorization: str | None = Header(default=None)) -> str:
-    if not authorization:
+def get_bearer_token(
+    credentials: HTTPAuthorizationCredentials | None = Security(bearer_scheme),
+) -> str:
+    if credentials is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token nao informado.",
         )
 
-    parts = authorization.split(" ", 1)
-    if len(parts) != 2 or parts[0].lower() != "bearer":
+    if credentials.scheme.lower() != "bearer":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Formato de autorizacao invalido.",
         )
 
-    return parts[1]
+    return credentials.credentials
 
 
-def get_current_user(authorization: str | None = Header(default=None)):
-    token = get_bearer_token(authorization)
-
+def get_current_user(token: str = Depends(get_bearer_token)):
     try:
         payload = parse_token_payload(token)
     except InvalidCredentialsError as exc:
@@ -67,9 +69,7 @@ def get_current_user(authorization: str | None = Header(default=None)):
 
 
 def require_roles(*roles: str):
-    def dependency(authorization: str | None = Header(default=None)):
-        current_user = get_current_user(authorization)
-
+    def dependency(current_user=Depends(get_current_user)):
         if current_user.role not in roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
