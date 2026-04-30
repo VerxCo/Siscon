@@ -136,3 +136,56 @@ def update_vinculo(vinculo_id: int, data: dict) -> dict | None:
         return None
 
     return get_vinculo_by_id(row[0])
+
+
+def delete_vinculo(vinculo_id: int) -> dict | None:
+    select_query = '''
+        select
+            id, convenio_id, consignataria_id, produto_nome, qtd_servidores,
+            cnpj, possui_base, possui_portal, link_portal, status_acesso_id,
+            data_solicitacao::text, possui_robo, faz_na_amigoz,
+            margem_online, observacao, ativo
+        from public.convenio_consignatarias
+        where id = %s
+        limit 1
+    '''
+    delete_query = '''
+        delete from public.convenio_consignatarias
+        where id = %s
+    '''
+
+    with get_db_connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(select_query, (vinculo_id,))
+            row = cursor.fetchone()
+
+            if row is None:
+                return None
+
+            cursor.execute(delete_query, (vinculo_id,))
+            if cursor.rowcount == 0:
+                return None
+
+            connection.commit()
+
+    return {
+        "message": "Vinculo removido com sucesso.",
+        "vinculo": {
+            "id": row[0],
+            "convenio_id": row[1],
+            "consignataria_id": row[2],
+            "produto_nome": row[3],
+            "qtd_servidores": row[4],
+            "cnpj": row[5],
+            "possui_base": row[6],
+            "possui_portal": row[7],
+            "link_portal": row[8],
+            "status_acesso_id": row[9],
+            "data_solicitacao": row[10],
+            "possui_robo": row[11],
+            "faz_na_amigoz": row[12],
+            "margem_online": row[13],
+            "observacao": row[14],
+            "ativo": row[15],
+        },
+    }

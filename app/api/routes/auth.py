@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, HTTPException, Security, status
 
 from app.api.deps import get_current_user
 from app.api.schemas.auth import LoginRequest, LoginResponse
@@ -32,7 +32,7 @@ def login(payload: LoginRequest) -> LoginResponse:
 
 
 @router.get("/me")
-def me(current_user=Depends(get_current_user)) -> dict:
+def me(current_user=Security(get_current_user)) -> dict:
     return {
         "user_id": current_user.user_id,
         "role": current_user.role,

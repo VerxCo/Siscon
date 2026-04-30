@@ -96,3 +96,50 @@ def update_convenio(convenio_id: int, data: dict) -> dict | None:
         "criado_em": row[4],
         "atualizado_em": row[5],
     }
+
+
+def delete_convenio(convenio_id: int) -> dict | None:
+    select_query = '''
+        select id, nome, nome_normalizado, ativo, criado_em::text, atualizado_em::text
+        from public.convenios
+        where id = %s
+        limit 1
+    '''
+    delete_vinculos_query = '''
+        delete from public.convenio_consignatarias
+        where convenio_id = %s
+    '''
+    delete_query = '''
+        delete from public.convenios
+        where id = %s
+    '''
+
+    with get_db_connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(select_query, (convenio_id,))
+            row = cursor.fetchone()
+
+            if row is None:
+                return None
+
+            cursor.execute(delete_vinculos_query, (convenio_id,))
+            vinculos_removidos = cursor.rowcount
+
+            cursor.execute(delete_query, (convenio_id,))
+            if cursor.rowcount == 0:
+                return None
+
+            connection.commit()
+
+    return {
+        "message": "Convenio removido com sucesso.",
+        "convenio": {
+            "id": row[0],
+            "nome": row[1],
+            "nome_normalizado": row[2],
+            "ativo": row[3],
+            "criado_em": row[4],
+            "atualizado_em": row[5],
+        },
+        "vinculos_removidos": vinculos_removidos,
+    }

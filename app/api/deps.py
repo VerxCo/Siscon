@@ -3,6 +3,7 @@ import uuid
 from fastapi import Depends, HTTPException, Security, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
+from app.core.config import get_settings
 from app.core.auth import (
     build_authenticated_user,
     build_authenticated_user_from_profile,
@@ -68,8 +69,14 @@ def get_current_user(token: str = Depends(get_bearer_token)):
     return build_authenticated_user(payload)
 
 
-def require_roles(*roles: str):
+def authorize(*roles: str, admin_user_id: str | None = None):
     def dependency(current_user=Depends(get_current_user)):
+        settings = get_settings()
+        allowed_admin_user_id = admin_user_id or settings.admin_user_id
+
+        if allowed_admin_user_id and current_user.user_id == allowed_admin_user_id:
+            return current_user
+
         if current_user.role not in roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -79,3 +86,7 @@ def require_roles(*roles: str):
         return current_user
 
     return dependency
+
+
+def require_roles(*roles: str):
+    return authorize(*roles)

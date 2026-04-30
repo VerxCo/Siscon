@@ -53,3 +53,5 @@ Permissões:
 - admin: tudo
 - editor: cria/edita
 - viewer: leitura
+
+Opcionalmente, defina `ADMIN_USER_ID` para liberar o acesso administrativo pelo ID do usuario autenticado, mesmo se o role vier diferente no token.

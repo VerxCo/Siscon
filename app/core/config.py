@@ -50,6 +50,7 @@ class Settings:
     jwt_secret_key: str
     jwt_algorithm: str
     jwt_access_token_expire_minutes: int
+    admin_user_id: str | None
     first_admin_email: str | None
     first_admin_password: str | None
 
@@ -65,6 +66,7 @@ class Settings:
             jwt_secret_key=os.getenv("JWT_SECRET_KEY", "dev-secret-change-me"),
             jwt_algorithm=os.getenv("JWT_ALGORITHM", "HS256"),
             jwt_access_token_expire_minutes=_read_int("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", 480),
+            admin_user_id=os.getenv("ADMIN_USER_ID"),
             first_admin_email=os.getenv("FIRST_ADMIN_EMAIL"),
             first_admin_password=os.getenv("FIRST_ADMIN_PASSWORD"),
         )
