@@ -8,7 +8,18 @@ def list_vinculos() -> list[dict]:
             cc.convenio_id,
             cc.consignataria_id,
             cc.produto_nome,
+            cc.qtd_servidores,
+            cc.cnpj,
+            cc.possui_base,
+            cc.possui_portal,
+            cc.link_portal,
             sa.codigo as status_acesso,
+            cc.data_solicitacao::text,
+            cc.possui_robo,
+            cc.faz_na_amigoz,
+            cc.margem_online,
+            cc.fonte_aba,
+            cc.fonte_linha,
             cc.ativo
         from public.convenio_consignatarias cc
         left join public.status_acesso sa on sa.id = cc.status_acesso_id
@@ -26,8 +37,19 @@ def list_vinculos() -> list[dict]:
             "convenio_id": row[1],
             "consignataria_id": row[2],
             "produto_nome": row[3],
-            "status_acesso": row[4],
-            "ativo": row[5],
+            "qtd_servidores": row[4],
+            "cnpj": row[5],
+            "possui_base": row[6],
+            "possui_portal": row[7],
+            "link_portal": row[8],
+            "status_acesso": row[9],
+            "data_solicitacao": row[10],
+            "possui_robo": row[11],
+            "faz_na_amigoz": row[12],
+            "margem_online": row[13],
+            "fonte_aba": row[14],
+            "fonte_linha": row[15],
+            "ativo": row[16],
         }
         for row in rows
     ]
@@ -36,12 +58,14 @@ def list_vinculos() -> list[dict]:
 def get_vinculo_by_id(vinculo_id: int) -> dict | None:
     query = '''
         select
-            id, convenio_id, consignataria_id, produto_nome, qtd_servidores,
-            cnpj, possui_base, possui_portal, link_portal, status_acesso_id,
-            data_solicitacao::text, possui_robo, faz_na_amigoz,
-            margem_online, observacao, ativo
-        from public.convenio_consignatarias
-        where id = %s
+            cc.id, cc.convenio_id, cc.consignataria_id, cc.produto_nome,
+            cc.qtd_servidores, cc.cnpj, cc.possui_base, cc.possui_portal,
+            cc.link_portal, sa.codigo as status_acesso, cc.status_acesso_id,
+            cc.data_solicitacao::text, cc.possui_robo, cc.faz_na_amigoz,
+            cc.margem_online, cc.fonte_aba, cc.fonte_linha, cc.observacao, cc.ativo
+        from public.convenio_consignatarias cc
+        left join public.status_acesso sa on sa.id = cc.status_acesso_id
+        where cc.id = %s
         limit 1
     '''
 
@@ -63,13 +87,16 @@ def get_vinculo_by_id(vinculo_id: int) -> dict | None:
         "possui_base": row[6],
         "possui_portal": row[7],
         "link_portal": row[8],
-        "status_acesso_id": row[9],
-        "data_solicitacao": row[10],
-        "possui_robo": row[11],
-        "faz_na_amigoz": row[12],
-        "margem_online": row[13],
-        "observacao": row[14],
-        "ativo": row[15],
+        "status_acesso": row[9],
+        "status_acesso_id": row[10],
+        "data_solicitacao": row[11],
+        "possui_robo": row[12],
+        "faz_na_amigoz": row[13],
+        "margem_online": row[14],
+        "fonte_aba": row[15],
+        "fonte_linha": row[16],
+        "observacao": row[17],
+        "ativo": row[18],
     }
 
 
@@ -77,16 +104,16 @@ def create_vinculo(data: dict) -> dict:
     query = '''
         insert into public.convenio_consignatarias (
             convenio_id, consignataria_id, produto_nome, qtd_servidores,
-            cnpj, possui_base, possui_portal, link_portal, status_acesso_id,
-            data_solicitacao, possui_robo, faz_na_amigoz, margem_online,
-            observacao, ativo
+            cnpj, possui_base, possui_portal, link_portal, fonte_aba,
+            fonte_linha, status_acesso_id, data_solicitacao, possui_robo,
+            faz_na_amigoz, margem_online, observacao, ativo
         )
         values (
             %(convenio_id)s, %(consignataria_id)s, %(produto_nome)s,
             %(qtd_servidores)s, %(cnpj)s, %(possui_base)s, %(possui_portal)s,
-            %(link_portal)s, %(status_acesso_id)s, %(data_solicitacao)s,
-            %(possui_robo)s, %(faz_na_amigoz)s, %(margem_online)s,
-            %(observacao)s, %(ativo)s
+            %(link_portal)s, %(fonte_aba)s, %(fonte_linha)s,
+            %(status_acesso_id)s, %(data_solicitacao)s, %(possui_robo)s,
+            %(faz_na_amigoz)s, %(margem_online)s, %(observacao)s, %(ativo)s
         )
         returning id
     '''
@@ -114,6 +141,8 @@ def update_vinculo(vinculo_id: int, data: dict) -> dict | None:
             possui_base = %(possui_base)s,
             possui_portal = %(possui_portal)s,
             link_portal = %(link_portal)s,
+            fonte_aba = %(fonte_aba)s,
+            fonte_linha = %(fonte_linha)s,
             status_acesso_id = %(status_acesso_id)s,
             data_solicitacao = %(data_solicitacao)s,
             possui_robo = %(possui_robo)s,
@@ -141,12 +170,14 @@ def update_vinculo(vinculo_id: int, data: dict) -> dict | None:
 def delete_vinculo(vinculo_id: int) -> dict | None:
     select_query = '''
         select
-            id, convenio_id, consignataria_id, produto_nome, qtd_servidores,
-            cnpj, possui_base, possui_portal, link_portal, status_acesso_id,
-            data_solicitacao::text, possui_robo, faz_na_amigoz,
-            margem_online, observacao, ativo
-        from public.convenio_consignatarias
-        where id = %s
+            cc.id, cc.convenio_id, cc.consignataria_id, cc.produto_nome,
+            cc.qtd_servidores, cc.cnpj, cc.possui_base, cc.possui_portal,
+            cc.link_portal, sa.codigo as status_acesso, cc.status_acesso_id,
+            cc.data_solicitacao::text, cc.possui_robo, cc.faz_na_amigoz,
+            cc.margem_online, cc.fonte_aba, cc.fonte_linha, cc.observacao, cc.ativo
+        from public.convenio_consignatarias cc
+        left join public.status_acesso sa on sa.id = cc.status_acesso_id
+        where cc.id = %s
         limit 1
     '''
     delete_query = '''
@@ -180,12 +211,15 @@ def delete_vinculo(vinculo_id: int) -> dict | None:
             "possui_base": row[6],
             "possui_portal": row[7],
             "link_portal": row[8],
-            "status_acesso_id": row[9],
-            "data_solicitacao": row[10],
-            "possui_robo": row[11],
-            "faz_na_amigoz": row[12],
-            "margem_online": row[13],
-            "observacao": row[14],
-            "ativo": row[15],
+            "status_acesso": row[9],
+            "status_acesso_id": row[10],
+            "data_solicitacao": row[11],
+            "possui_robo": row[12],
+            "faz_na_amigoz": row[13],
+            "margem_online": row[14],
+            "fonte_aba": row[15],
+            "fonte_linha": row[16],
+            "observacao": row[17],
+            "ativo": row[18],
         },
     }
