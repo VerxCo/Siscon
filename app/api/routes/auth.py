@@ -1,15 +1,31 @@
+import os
+
 from fastapi import APIRouter, HTTPException, Security, status
 
 from app.api.deps import get_current_user
 from app.api.schemas.auth import LoginRequest, LoginResponse
+from app.core.config import get_settings
 from app.repositories.user_repository import get_user_by_email
-from app.services.auth_service import AuthenticationError, authenticate_user, issue_token_for_user
+from app.services.auth_service import (
+    AuthenticationError,
+    authenticate_user,
+    issue_token_for_user,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/login", response_model=LoginResponse)
 def login(payload: LoginRequest) -> LoginResponse:
+    settings = get_settings()
+    auth_mode = getattr(settings, "auth_mode", os.getenv("AUTH_MODE", "dev"))
+
+    if auth_mode == "supabase":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Login local desabilitado neste ambiente.",
+        )
+
     user = get_user_by_email(payload.email)
 
     try:

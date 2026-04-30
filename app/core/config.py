@@ -53,12 +53,16 @@ class Settings:
     admin_user_id: str | None
     first_admin_email: str | None
     first_admin_password: str | None
+    auth_mode: str
+    frontend_url: str | None
 
     @classmethod
     def from_env(cls) -> "Settings":
         load_env_file()
 
         return cls(
+            auth_mode=os.getenv("AUTH_MODE", "dev"),
+            frontend_url=os.getenv("FRONTEND_URL"),
             app_name=os.getenv("APP_NAME", "Siscon API"),
             app_version=os.getenv("APP_VERSION", "0.1.0"),
             debug=_read_bool("DEBUG", default=False),
