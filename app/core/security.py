@@ -5,8 +5,17 @@ import json
 import secrets
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from functools import lru_cache
+
+import httpx
+import jwt
 
 from app.core.config import get_settings
+
+SUPABASE_JWKS_URL = (
+    "https://lqlwgdhfvcnytfumjlpm.supabase.co/auth/v1/.well-known/jwks.json"
+)
+SUPABASE_ISSUER = "https://lqlwgdhfvcnytfumjlpm.supabase.co/auth/v1"
 
 
 class InvalidCredentialsError(Exception):
@@ -98,7 +107,76 @@ def create_access_token(subject: str, role: str, expires_delta: timedelta | None
     return f"{encoded_header}.{encoded_payload}.{signature}"
 
 
-def decode_token(token: str) -> dict:
+@lru_cache(maxsize=1)
+def _fetch_supabase_jwks(jwks_url: str) -> dict:
+    try:
+        response = httpx.get(jwks_url, timeout=5.0)
+        response.raise_for_status()
+        data = response.json()
+    except (httpx.HTTPError, ValueError) as exc:
+        raise InvalidCredentialsError("Unable to load Supabase JWKS.") from exc
+
+    if not isinstance(data, dict):
+        raise InvalidCredentialsError("Invalid Supabase JWKS payload.")
+
+    keys = data.get("keys")
+    if not isinstance(keys, list):
+        raise InvalidCredentialsError("Invalid Supabase JWKS payload.")
+
+    return data
+
+
+def _get_supabase_public_key(token: str) -> object:
+    try:
+        header = jwt.get_unverified_header(token)
+    except jwt.PyJWTError as exc:
+        raise InvalidCredentialsError("Malformed token header.") from exc
+
+    if header.get("alg") != "ES256":
+        raise InvalidCredentialsError("Unexpected token algorithm.")
+
+    kid = header.get("kid")
+    if not kid:
+        raise InvalidCredentialsError("Token without key id.")
+
+    jwks = _fetch_supabase_jwks(SUPABASE_JWKS_URL)
+    jwk = next((key for key in jwks["keys"] if key.get("kid") == kid), None)
+
+    if jwk is None:
+        _fetch_supabase_jwks.cache_clear()
+        jwks = _fetch_supabase_jwks(SUPABASE_JWKS_URL)
+        jwk = next((key for key in jwks["keys"] if key.get("kid") == kid), None)
+
+    if jwk is None:
+        raise InvalidCredentialsError("Supabase public key not found.")
+
+    try:
+        return jwt.PyJWK.from_dict(jwk).key
+    except (TypeError, ValueError, jwt.PyJWTError) as exc:
+        raise InvalidCredentialsError("Invalid Supabase public key.") from exc
+
+
+def _decode_supabase_token(token: str) -> dict:
+    public_key = _get_supabase_public_key(token)
+
+    try:
+        return jwt.decode(
+            token,
+            public_key,
+            algorithms=["ES256"],
+            issuer=SUPABASE_ISSUER,
+            options={
+                "verify_aud": False,
+                "require": ["exp", "sub"],
+            },
+        )
+    except jwt.ExpiredSignatureError as exc:
+        raise TokenExpiredError("Token expired.") from exc
+    except jwt.PyJWTError as exc:
+        raise InvalidCredentialsError("Invalid Supabase token.") from exc
+
+
+def _decode_local_token(token: str) -> dict:
     settings = get_settings()
 
     try:
@@ -130,6 +208,13 @@ def decode_token(token: str) -> dict:
         raise TokenExpiredError("Token expired.")
 
     return payload
+
+
+def decode_token(token: str) -> dict:
+    settings = get_settings()
+    if settings.auth_mode == "supabase":
+        return _decode_supabase_token(token)
+    return _decode_local_token(token)
 
 
 def parse_token_payload(token: str) -> TokenPayload:

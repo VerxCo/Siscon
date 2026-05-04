@@ -3,3 +3,5 @@ uvicorn
 httpx
 psycopg[binary]
 pydantic
+PyJWT
+cryptography
