@@ -42,7 +42,7 @@ def login(payload: LoginRequest) -> LoginResponse:
         access_token=token,
         token_type="bearer",
         user_id=authenticated_user.user_id,
-        nome=user.nome,
+        full_name=user.nome,
         role=authenticated_user.role,
     )
 
@@ -53,4 +53,5 @@ def me(current_user=Security(get_current_user)) -> dict:
         "user_id": current_user.user_id,
         "role": current_user.role,
         "is_active": current_user.is_active,
+        "full_name": current_user.full_name,
     }
