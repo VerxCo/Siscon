@@ -67,7 +67,7 @@ def put_consignataria(
 @router.delete("/{consignataria_id}")
 def delete_consignataria_route(
     consignataria_id: int,
-    _: dict = Security(require_roles("admin", "editor")),
+    _: dict = Security(require_roles("admin")),
 ):
     consignataria = delete_consignataria(consignataria_id)
 

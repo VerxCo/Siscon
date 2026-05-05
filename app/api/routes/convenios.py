@@ -67,7 +67,7 @@ def put_convenio(
 @router.delete("/{convenio_id}")
 def delete_convenio_route(
     convenio_id: int,
-    _: dict = Security(require_roles("admin", "editor")),
+    _: dict = Security(require_roles("admin")),
 ):
     convenio = delete_convenio(convenio_id)
 

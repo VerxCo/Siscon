@@ -67,7 +67,7 @@ def put_vinculo(
 @router.delete("/{vinculo_id}")
 def delete_vinculo_route(
     vinculo_id: int,
-    _: dict = Security(require_roles("admin", "editor")),
+    _: dict = Security(require_roles("admin")),
 ):
     vinculo = delete_vinculo(vinculo_id)
 
